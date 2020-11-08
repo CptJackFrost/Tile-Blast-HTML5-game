@@ -30,18 +30,18 @@ window.onload = function() {
     
     let minClusterSize = 2;
     let cluster = []; //массив с кластером
-
-    // Current move
-    let currentmove = { column1: 0, row1: 0, column2: 0, row2: 0 };
     
-    // Game states
+
+    let S = 3;      //перемешиваний
+    let Y = 10;     //ходов до проигрыша
+
     let gamestates = { init: 0, ready: 1, resolve: 2 };
     let gamestate = gamestates.init;
-    let shuffles = 10;  //сколько будет перемешиваний
-    let movesLeft = 20; //за сколько ходов нужно закончить игру
+    let shuffles = S;  //текущее число перемешиваний
+    let movesLeft = Y; //ходов осталось
     
     let score = 0;
-    let goal = 20000; //сколько нужно набрать
+    let goal = 10000; //сколько нужно набрать
     
     let animationstate = 0;
     let animationtime = 0;
@@ -50,8 +50,7 @@ window.onload = function() {
     let gameover = false;
     
     // кнопки интерфейса
-    let buttons = [ { x: 30, y: 240, width: 150, height: 50, text: "Новая игра"},
-                    { x: 30, y: 300, width: 150, height: 50, text: "Перемешать"} ];
+    let buttons = [ { x: 30, y: 270, width: 150, height: 50, text: "Новая игра"} ];
     
     // Initialize the game
     function init() {
@@ -83,11 +82,20 @@ window.onload = function() {
         updateFps(dt);
         
         if (gamestate == gamestates.ready) {
-            
-            // Check for game over
-            //if () {
-                //gameover = true;
-            //}            
+            if (score >= goal || movesLeft <= 0) {
+                gameover = true;
+            }
+
+            if (!findMove()){
+                if (shuffles >= 1){
+                    shuffle();
+                    shuffles--;
+                    console.log(shuffles);
+                } else {
+                    gameover = true;
+                }
+            }
+
         } else
 
         if (gamestate == gamestates.resolve) {
@@ -102,6 +110,8 @@ window.onload = function() {
                         for (let i=0; i<cluster.length; i++) {
                             score += 100 * (cluster.length + (1 - minClusterSize));
                         }
+
+                        movesLeft--;
 
                         removeClusters();
                         cluster = [];
@@ -151,12 +161,18 @@ window.onload = function() {
         // Счетчик очков
         context.fillStyle = "#000000";
         context.font = "24px Verdana";
-        drawCenterText("Score:", 30, level.y+40, 150);
-        drawCenterText(score, 30, level.y+70, 150);
+        drawCenterText("Очки:", 30, level.y+30, 150);
+        drawCenterText(score, 30, level.y+60, 150);
+
+        context.font = "16px Verdana";
+        drawCenterText("Осталось ходов:", 30, level.y+90, 150);
+        drawCenterText(movesLeft, 30, level.y+110, 150);
+
         
         drawButtons();
         
-        // фон у самого левела с тайлами
+
+
         let levelwidth = level.columns * level.tilewidth;
         let levelheight = level.rows * level.tileheight;
         context.fillStyle = "#000000";
@@ -171,7 +187,12 @@ window.onload = function() {
             
             context.fillStyle = "#ffffff";
             context.font = "24px Verdana";
-            drawCenterText("Game Over!", level.x, level.y + levelheight / 2 + 10, levelwidth);
+            if (score >= goal){
+                drawCenterText("Congratulations! You won!", level.x, level.y + levelheight / 2 + 10, levelwidth);
+            } else {
+                drawCenterText("Game Over!", level.x, level.y + levelheight / 2 + 10, levelwidth);
+            }
+
         }
     }
     
@@ -239,7 +260,9 @@ window.onload = function() {
     }
     
     function newGame() {
-        score = 0;        
+        score = 0;
+        movesLeft = Y;
+        shuffles = S;
         gamestate = gamestates.ready;        
         gameover = false;
         createLevel();
@@ -398,11 +421,13 @@ window.onload = function() {
             
             //на тайл
             if (mt.valid) {
-                findCluster(mt.x, mt.y, [level.tiles[mt.x][mt.y]]);
-                if (cluster.length >= minClusterSize) {
-                    gamestate = gamestates.resolve;
-                    animationtime = 0;
-                    animationstate = 0;
+                if (!gameover){
+                    findCluster(mt.x, mt.y, [level.tiles[mt.x][mt.y]]);
+                    if (cluster.length >= minClusterSize) {
+                        gamestate = gamestates.resolve;
+                        animationtime = 0;
+                        animationstate = 0;
+                    }
                 }
             }
         
@@ -414,9 +439,6 @@ window.onload = function() {
                 if (i == 0) {
                     // новая игра
                     newGame();
-                } else if (i == 1) {
-                    // Перемешать
-
                 }
             }
         }
@@ -429,6 +451,23 @@ window.onload = function() {
             y: Math.round((e.clientY - rect.top)/(rect.bottom - rect.top)*canvas.height)
         };
     }
+
+    function shuffle() {
+        let randx;
+        let randy;
+        let temp;
+
+        for (let i = level.columns-1; i > 0; i--){
+            for (let j = level.rows-1; j > 0; j--){
+                randy = Math.floor(Math.random()*(j + 1));
+                randx = Math.floor(Math.random()*(i + 1));
+                temp = level.tiles[randx][randy];
+                level.tiles[randx][randy] = level.tiles[i][j];
+                level.tiles[i][j] = temp;
+            }
+        }
+
+      }
     
     init();
 };
