@@ -76,7 +76,6 @@ window.onload = function() {
         render();
     }
     
-    // Update the game state
     function update(tframe) {
         let dt = (tframe - lastframe) / 1000;
         lastframe = tframe;
@@ -88,8 +87,43 @@ window.onload = function() {
             // Check for game over
             //if () {
                 //gameover = true;
-            //}
+            //}            
+        } else
+
+        if (gamestate == gamestates.resolve) {
+            animationtime += dt;
             
+            if (animationstate === 0) {
+
+                if (animationtime > animationtimetotal) {
+                    
+                    //считаем очки
+                    if (cluster.length >= minClusterSize) {
+                        for (let i=0; i<cluster.length; i++) {
+                            score += 100 * (cluster.length + (1 - minClusterSize));
+                        }
+
+                        removeClusters();
+                        cluster = [];
+                        
+                        animationstate = 1;
+                    } else {
+                        gamestate = gamestates.ready;
+                    }
+                    animationtime = 0;
+                }
+            } else if (animationstate === 1) {
+                if (animationtime > animationtimetotal) {
+                    shiftTiles();
+                    
+                    animationstate = 0;
+                    animationtime = 0;
+                    
+                    if (cluster.length <= 0) {
+                        gamestate = gamestates.ready;
+                    }
+                }
+            }
         }
     }
     
@@ -114,7 +148,7 @@ window.onload = function() {
     function render() {
         drawFrame();
         
-        // Очки
+        // Счетчик очков
         context.fillStyle = "#000000";
         context.font = "24px Verdana";
         drawCenterText("Score:", 30, level.y+40, 150);
@@ -191,7 +225,6 @@ window.onload = function() {
         }
     }
     
-    // Get the tile coordinate
     function getTileCoordinate(column, row, columnoffset, rowoffset) {
         let tilex = level.x + (column + columnoffset) * level.tilewidth;
         let tiley = level.y + (row + rowoffset) * level.tileheight;
@@ -205,7 +238,6 @@ window.onload = function() {
         context.fillRect(x + 2, y + 2, level.tilewidth - 4, level.tileheight - 4);
     }
     
-    // Start a new game
     function newGame() {
         score = 0;        
         gamestate = gamestates.ready;        
@@ -217,8 +249,7 @@ window.onload = function() {
         let done = false;
 
         //заполняем поле рандомными тайлами
-        //пока не выпадет комбинация, где есть хотя бы один мув
-        //да, тупо брутфорс, зато простой, как палка
+        //пока не выпадет комбинация, где есть хотя бы один ход
         
         while (!done) {    
             for (let i=0; i<level.columns; i++) {
@@ -279,7 +310,8 @@ window.onload = function() {
         for (let i = 0; i < level.rows; i++){
             if (!moveFound){
                 for (let j = 0; j < level.columns; j++){
-                    if (findCluster(i, j, [level.tiles[i][j]] ).length >= minClusterSize){
+                    findCluster(i, j, [level.tiles[i][j]]);
+                    if (cluster.length >= minClusterSize){
                         moveFound = true;
                         break;
                     }
@@ -294,7 +326,7 @@ window.onload = function() {
     }
     
 
-    function removeClusters() {
+    function removeClusters() {        
         //меняем тип каждого тайла, помечая его, как "взорвавшийся"
         for (let tile of cluster){
             level.tiles[tile.coorx][tile.coory].type = -1;
@@ -366,10 +398,11 @@ window.onload = function() {
             
             //на тайл
             if (mt.valid) {
-                console.log(findCluster(mt.x, mt.y, [level.tiles[mt.x][mt.y]]));
+                findCluster(mt.x, mt.y, [level.tiles[mt.x][mt.y]]);
                 if (cluster.length >= minClusterSize) {
-                    removeClusters();
-                    shiftTiles();
+                    gamestate = gamestates.resolve;
+                    animationtime = 0;
+                    animationstate = 0;
                 }
             }
         
