@@ -32,13 +32,13 @@ window.onload = function() {
     let cluster = []; //массив с кластером
     
 
-    let S = 3;      //перемешиваний
-    let Y = 10;     //ходов до проигрыша
+    let initShuffles = 3;      //перемешиваний
+    let initMoves = 10;     //ходов до проигрыша
 
     let gamestates = { init: 0, ready: 1, resolve: 2 };
     let gamestate = gamestates.init;
-    let shuffles = S;  //текущее число перемешиваний
-    let movesLeft = Y; //ходов осталось
+    let shuffles;  //текущее число перемешиваний
+    let movesLeft; //ходов осталось
     
     let score = 0;
     let goal = 10000; //сколько нужно набрать
@@ -261,8 +261,8 @@ window.onload = function() {
     
     function newGame() {
         score = 0;
-        movesLeft = Y;
-        shuffles = S;
+        movesLeft = initMoves;
+        shuffles = initShuffles;
         gamestate = gamestates.ready;        
         gameover = false;
         createLevel();
@@ -293,32 +293,32 @@ window.onload = function() {
 
     //магия рекурсии
     function findCluster(x, y, clus){
-
-        let clusterType = level.tiles[x][y].type;
-
-        //соседи тайла (если они есть)
-        let upper = (level.tiles[x][y-1] === undefined ? null : level.tiles[x][y-1]);
-        let lower = (level.tiles[x][y+1] === undefined ? null : level.tiles[x][y+1]);
-        let left = (level.tiles[x-1]  === undefined ? null : level.tiles[x-1][y]);
-        let right = (level.tiles[x+1] === undefined ? null : level.tiles[x+1][y]);
-
-        //запихать в массив для удобства
-        let neighboors = [upper, lower, left, right];
-
         //массив кластера должен на вызове стать копией того, что передано в функцию
         cluster = clus.slice();
 
-        //проверяем всех соседей
-        //если...
-        for (let neighboor of neighboors){
-            if (neighboor !== null                      //...он вообще есть &&
-                &&neighboor.type === clusterType        //   он того же цвета &&  
-                && !(cluster.includes(neighboor))) {    //   если его еще нет в массиве кластера
-                    cluster.push(neighboor);
-                    findCluster(neighboor.coorx, neighboor.coory, cluster);
-            }
-        }
+        let clusterType = level.tiles[x][y].type;
 
+        for (let i = -1; i <= 1; i++){
+            //пропускаем "несуществующие" строки
+            if (level.tiles[x + i] === undefined){
+                continue;
+            } else {
+                for (let j = -1; j <= 1; j++){
+                    //исключаем проверяемый тайл и "угловые"
+                    if (Math.abs(j) === Math.abs(i)){
+                        continue;
+                    } else {
+                        let neighbor = level.tiles[x+i][y+j];
+                        if (neighbor !== undefined &&
+                            neighbor.type === clusterType &&
+                            !(cluster.includes(neighbor))) {
+                                cluster.push(neighbor);
+                                findCluster(neighbor.coorx, neighbor.coory, cluster)
+                        }
+                    }
+                }
+            }            
+        }
         return cluster;
     }
 
